@@ -1,0 +1,70 @@
+{
+    "1f435a6e-b29c-4aeb-981e-04341f685a56": {
+        "id": "1f435a6e-b29c-4aeb-981e-04341f685a56",
+        "computador_id": "556a41d2-0dd7-4177-b17a-ab90801a2041",
+        "administrador": "Administrador KeyNexus",
+        "permissoes": [
+            "visualizacao",
+            "controle",
+            "arquivos"
+        ],
+        "status": "expirada",
+        "criada_em": "2026-11-05T19:17:06.926858+00:00",
+        "expira_em": "2026-11-05T19:19:06.926858+00:00",
+        "respondida_em": null
+    },
+    "ba167a60-f0ef-405a-94db-82d4fb77ea89": {
+        "id": "ba167a60-f0ef-405a-94db-82d4fb77ea89",
+        "computador_id": "946134e4-7638-4a96-b501-0ec1bad942c3",
+        "administrador": "Administrador KeyNexus",
+        "permissoes": [
+            "visualizacao",
+            "controle",
+            "arquivos"
+        ],
+        "status": "expirada",
+        "criada_em": "2026-11-05T19:19:12.880048+00:00",
+        "expira_em": "2026-11-05T19:21:12.880048+00:00",
+        "respondida_em": null
+    },
+    "ac866e12-2179-444b-aa28-044af8d4e5a5": {
+        "id": "ac866e12-2179-444b-aa28-044af8d4e5a5",
+        "computador_id": "946134e4-7638-4a96-b501-0ec1bad942c3",
+        "administrador": "Administrador KeyNexus",
+        "permissoes": [
+            "visualizacao",
+            "controle",
+            "arquivos"
+        ],
+        "status": "expirada",
+        "criada_em": "2026-11-05T19:24:26.883612+00:00",
+        "expira_em": "2026-11-05T19:26:26.883612+00:00",
+        "respondida_em": null
+    },
+    "6cef26c8-4e42-4a18-9534-1573aeb98e5e": {
+        "id": "6cef26c8-4e42-4a18-9534-1573aeb98e5e",
+        "computador_id": "556a41d2-0dd7-4177-b17a-ab90801a2041",
+        "administrador": "Administrador KeyNexus",
+        "permissoes": [
+            "visualizacao",
+            "controle",
+            "arquivos"
+        ],
+        "status": "expirada",
+        "criada_em": "2026-11-05T19:26:19.037097+00:00",
+        "expira_em": "2026-11-05T19:28:19.037097+00:00",
+        "respondida_em": null
+    },
+    "201a994d-212c-4247-a15a-3edfeb10afe2": {
+        "id": "201a994d-212c-4247-a15a-3edfeb10afe2",
+        "computador_id": "ca3f3f1a-c5b5-4622-a406-896dc1e1b7d9",
+        "administrador": "Administrador KeyNexus",
+        "permissoes": [
+            "visualizacao"
+        ],
+        "status": "aceita",
+        "criada_em": "2026-11-05T19:30:51.197728+00:00",
+        "expira_em": "2026-11-05T19:32:51.197728+00:00",
+        "respondida_em": "2026-11-05T19:31:09.454154+00:00"
+    }
+}

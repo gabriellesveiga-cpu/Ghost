@@ -1,0 +1,48 @@
+{
+    "314be2ed-1d58-4f20-acd6-657fe3cf4865": {
+        "id": "314be2ed-1d58-4f20-acd6-657fe3cf4865",
+        "nome": "Computador Administrador",
+        "tipo": "administrador",
+        "status": "nao_verificado",
+        "cadastrado_em": "2026-11-05T17:59:00.197877+00:00"
+    },
+    "556a41d2-0dd7-4177-b17a-ab90801a2041": {
+        "id": "556a41d2-0dd7-4177-b17a-ab90801a2041",
+        "nome": "Computador Remoto",
+        "tipo": "agente",
+        "status": "nao_verificado",
+        "cadastrado_em": "2026-11-05T17:59:00.216218+00:00"
+    },
+    "426030c8-3921-49af-bec5-81dd702dc430": {
+        "id": "426030c8-3921-49af-bec5-81dd702dc430",
+        "nome": "Computador de Teste",
+        "tipo": "agente",
+        "status": "nao_verificado",
+        "chave_hash": "d5c197384757c1e393fa4f8f11fe2e82578426170196017ccdd8f0e4cec23a58",
+        "cadastrado_em": "2026-11-05T18:01:40.183363+00:00"
+    },
+    "228a74d8-d47f-4e5e-b494-6d733512cedc": {
+        "id": "228a74d8-d47f-4e5e-b494-6d733512cedc",
+        "nome": "computador teste",
+        "tipo": "administrador",
+        "status": "nao_verificado",
+        "chave_hash": "860371fd3b3eb43ae1fe2581fe41df41d85594b8e80efef4021fe60900ca97ca",
+        "cadastrado_em": "2026-11-05T18:16:06.360453+00:00"
+    },
+    "946134e4-7638-4a96-b501-0ec1bad942c3": {
+        "id": "946134e4-7638-4a96-b501-0ec1bad942c3",
+        "nome": "Computador Agente 01",
+        "tipo": "agente",
+        "status": "nao_verificado",
+        "chave_hash": "1a74355b6d3fb1d36a2fff9f700ae7b3d9d8244f84c3beaf0b8cf72a20859490",
+        "cadastrado_em": "2026-11-05T18:22:29.491623+00:00"
+    },
+    "ca3f3f1a-c5b5-4622-a406-896dc1e1b7d9": {
+        "id": "ca3f3f1a-c5b5-4622-a406-896dc1e1b7d9",
+        "nome": "Computador",
+        "tipo": "agente",
+        "status": "nao_verificado",
+        "chave_hash": "9280da89352ac0b0fd8045b7e3ec9068a51797d01c51e79698e4e8c3d0e63a44",
+        "cadastrado_em": "2026-11-05T18:31:50.217935+00:00"
+    }
+}

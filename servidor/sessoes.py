@@ -14,8 +14,6 @@ ARQUIVO = PASTA_DADOS / "sessoes.json"
 BLOQUEIO = threading.RLock()
 
 DURACAO_MAXIMA = timedelta(hours=8)
-
-# Tempo máximo sem confirmação do Agente
 TEMPO_INATIVIDADE = timedelta(seconds=30)
 
 PERMISSOES_VALIDAS = {
@@ -104,6 +102,27 @@ def atualizar_expiracoes(sessoes):
     return alterado
 
 
+def validar_permissoes(permissoes):
+    if not isinstance(permissoes, list):
+        raise ValueError(
+            "As permissões devem ser uma lista."
+        )
+
+    if not permissoes:
+        raise ValueError(
+            "Nenhuma permissão autorizada."
+        )
+
+    if not set(permissoes).issubset(PERMISSOES_VALIDAS):
+        raise ValueError(
+            "Permissão inválida."
+        )
+
+    if len(permissoes) != len(set(permissoes)):
+        raise ValueError(
+            "Existem permissões repetidas."
+        )
+
 
 def criar_sessao(
     solicitacao_id,
@@ -112,7 +131,11 @@ def criar_sessao(
 ):
     from .solicitacoes import listar_solicitacoes
 
-    solicitacoes = listar_solicitacoes(computador_id)
+    validar_permissoes(permissoes)
+
+    solicitacoes = listar_solicitacoes(
+        computador_id
+    )
 
     solicitacao = next(
         (
@@ -175,58 +198,7 @@ def criar_sessao(
                 )
 
         sessoes[identificador] = sessao
-        salvar_sessoes(sessoes)
 
-    return sessao.copy()
-
-    if not isinstance(permissoes, list):
-        raise ValueError(
-            "As permissões devem ser uma lista."
-        )
-
-    if not permissoes:
-        raise ValueError(
-            "Nenhuma permissão autorizada."
-        )
-
-    if not set(permissoes).issubset(PERMISSOES_VALIDAS):
-        raise ValueError(
-            "Permissão inválida."
-        )
-
-    momento = agora()
-    identificador = str(uuid4())
-
-    sessao = {
-        "id": identificador,
-        "solicitacao_id": solicitacao_id,
-        "computador_id": computador_id,
-        "permissoes": permissoes.copy(),
-        "status": "ativa",
-        "iniciada_em": momento.isoformat(),
-        "ultima_atividade": momento.isoformat(),
-        "expira_em": (
-            momento + DURACAO_MAXIMA
-        ).isoformat(),
-        "encerrada_em": None
-    }
-
-    with BLOQUEIO:
-        sessoes = carregar_sessoes()
-
-        atualizar_expiracoes(sessoes)
-
-        # Uma sessão ativa por computador
-        for existente in sessoes.values():
-            if (
-                existente["computador_id"] == computador_id
-                and existente["status"] == "ativa"
-            ):
-                raise ValueError(
-                    "O computador já possui uma sessão ativa."
-                )
-
-        sessoes[identificador] = sessao
         salvar_sessoes(sessoes)
 
     return sessao.copy()
@@ -266,22 +238,50 @@ def listar_sessoes_computador(computador_id):
         ]
 
 
+def buscar_sessao_ativa_computador(computador_id):
+    """
+    Retorna a sessão ativa de um computador,
+    se existir.
+    """
+
+    with BLOQUEIO:
+        sessoes = carregar_sessoes()
+
+        if atualizar_expiracoes(sessoes):
+            salvar_sessoes(sessoes)
+
+        for sessao in sessoes.values():
+            if (
+                sessao["computador_id"] == computador_id
+                and sessao["status"] == "ativa"
+            ):
+                return sessao.copy()
+
+    return None
+
+
 def registrar_atividade(sessao_id, computador_id):
     with BLOQUEIO:
         sessoes = carregar_sessoes()
 
-        expiracoes_alteradas = atualizar_expiracoes(sessoes)
+        expiracoes_alteradas = atualizar_expiracoes(
+            sessoes
+        )
 
         sessao = sessoes.get(sessao_id)
 
         if sessao is None:
             if expiracoes_alteradas:
                 salvar_sessoes(sessoes)
-            raise ValueError("Sessão não encontrada.")
+
+            raise ValueError(
+                "Sessão não encontrada."
+            )
 
         if sessao["computador_id"] != computador_id:
             if expiracoes_alteradas:
                 salvar_sessoes(sessoes)
+
             raise PermissionError(
                 "Sessão pertence a outro computador."
             )
@@ -289,6 +289,7 @@ def registrar_atividade(sessao_id, computador_id):
         if sessao["status"] != "ativa":
             if expiracoes_alteradas:
                 salvar_sessoes(sessoes)
+
             raise ValueError(
                 "Sessão não está ativa."
             )
@@ -308,13 +309,16 @@ def encerrar_sessao(
     with BLOQUEIO:
         sessoes = carregar_sessoes()
 
-        expiracoes_alteradas = atualizar_expiracoes(sessoes)
+        expiracoes_alteradas = atualizar_expiracoes(
+            sessoes
+        )
 
         sessao = sessoes.get(sessao_id)
 
         if sessao is None:
             if expiracoes_alteradas:
                 salvar_sessoes(sessoes)
+
             raise ValueError(
                 "Sessão não encontrada."
             )
@@ -322,6 +326,7 @@ def encerrar_sessao(
         if sessao["computador_id"] != computador_id:
             if expiracoes_alteradas:
                 salvar_sessoes(sessoes)
+
             raise PermissionError(
                 "Sessão pertence a outro computador."
             )
@@ -329,6 +334,7 @@ def encerrar_sessao(
         if sessao["status"] != "ativa":
             if expiracoes_alteradas:
                 salvar_sessoes(sessoes)
+
             return sessao.copy()
 
         sessao["status"] = motivo
@@ -337,3 +343,22 @@ def encerrar_sessao(
         salvar_sessoes(sessoes)
 
         return sessao.copy()
+
+
+def buscar_sessao_por_solicitacao(solicitacao_id):
+    """
+    Procura a sessão vinculada a uma solicitação,
+    independentemente do seu estado.
+    """
+
+    with BLOQUEIO:
+        sessoes = carregar_sessoes()
+
+        if atualizar_expiracoes(sessoes):
+            salvar_sessoes(sessoes)
+
+        for sessao in sessoes.values():
+            if sessao["solicitacao_id"] == solicitacao_id:
+                return sessao.copy()
+
+    return None

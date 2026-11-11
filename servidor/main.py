@@ -1,3 +1,4 @@
+from .canal_protegido import criar_router_canal_protegido
 
 import json
 import secrets
@@ -40,6 +41,8 @@ from .sessoes import (
     encerrar_sessao
 )
 
+from .consulta_admin import criar_router_consulta_admin
+from .canal_tela import router as router_canal_tela
 
 
 
@@ -48,6 +51,9 @@ app = FastAPI(
     description="Servidor de assistência remota segura",
     version="0.5.0"
 )
+
+app.include_router(router_canal_tela)
+
 
 PASTA_DADOS = Path(__file__).resolve().parent / "dados"
 ARQUIVO_COMPUTADORES = PASTA_DADOS / "computadores.json"
@@ -192,6 +198,7 @@ def salvar_json(caminho, dados):
 computadores = carregar_json(ARQUIVO_COMPUTADORES, {})
 
 
+
 def exigir_admin(authorization: str | None = Header(default=None)):
     if not authorization:
         raise HTTPException(
@@ -226,6 +233,40 @@ def exigir_admin(authorization: str | None = Header(default=None)):
 
     return token
 
+
+def verificar_token_admin_websocket(token: str) -> bool:
+    """
+    Verifica se o token do Administrador
+    existe e ainda está dentro da validade.
+    """
+
+    if not isinstance(token, str) or not token:
+        return False
+
+    with BLOQUEIO:
+        expiracao = sessoes.get(token)
+
+        if expiracao is None:
+            return False
+
+        if monotonic() >= expiracao:
+            sessoes.pop(token, None)
+            return False
+
+    return True
+
+    app.include_router(
+    criar_router_canal_protegido(
+        verificar_token_admin_websocket
+    )
+)
+
+    app.include_router(
+    criar_router_consulta_admin(
+        exigir_admin=exigir_admin,
+        computadores=computadores
+    )
+)
 
 @app.get("/")
 def inicio():
@@ -780,3 +821,11 @@ def finalizar_sessao(dados: DadosSessao):
         "encerrada": True,
         "sessao": sessao
     }
+
+
+app.include_router(
+    criar_router_canal_protegido(
+        verificar_token_admin_websocket,
+        verificar_agente_com_usb
+    )
+)

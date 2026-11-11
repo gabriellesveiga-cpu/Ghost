@@ -1,0 +1,50 @@
+
+import asyncio
+
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+
+
+def criar_router_canal_protegido(verificar_admin):
+    router = APIRouter(tags=["Canal protegido"])
+
+    @router.websocket("/ws/tela/protegido")
+    async def canal_protegido(websocket: WebSocket):
+        await websocket.accept()
+
+        try:
+            mensagem = await asyncio.wait_for(
+                websocket.receive_json(),
+                timeout=10
+            )
+
+            if not isinstance(mensagem, dict):
+                await websocket.close(code=1008)
+                return
+
+            token = mensagem.get("token")
+
+            if not verificar_admin(token):
+                await websocket.close(
+                    code=1008,
+                    reason="Administrador nao autenticado."
+                )
+                return
+
+            await websocket.send_json({
+                "tipo": "autenticacao",
+                "autenticado": True,
+                "visualizacao_liberada": False
+            })
+
+            await websocket.close(
+                code=1000,
+                reason="Compartilhamento indisponivel."
+            )
+
+        except (asyncio.TimeoutError, ValueError, TypeError):
+            await websocket.close(code=1008)
+
+        except WebSocketDisconnect:
+            pass
+
+    return router

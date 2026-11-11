@@ -6,7 +6,7 @@ import requests
 
 from janela_conexao import JanelaConexao
 from janela_solicitacoes import JanelaSolicitacoes
-
+from janela_visualizacao import JanelaVisualizacao
 
 
 URL = "http://127.0.0.1:8000"
@@ -17,8 +17,8 @@ class KeyNexusAdmin:
     def __init__(self, janela):
         self.janela = janela
         self.janela.title("KeyNexus — Administrador")
-        self.janela.geometry("750x570")
-        self.janela.minsize(650, 500)
+        self.janela.geometry("850x650")
+        self.janela.minsize(750, 570)
         self.janela.configure(bg="#15101E")
 
         self.token = None
@@ -65,6 +65,8 @@ class KeyNexusAdmin:
             cursor="hand2"
         )
 
+    # LOGIN
+
     def criar_login(self):
         self.limpar()
 
@@ -79,7 +81,9 @@ class KeyNexusAdmin:
             13
         ).pack(pady=10)
 
-        self.criar_label("Usuário").pack(pady=(25, 5))
+        self.criar_label(
+            "Usuário"
+        ).pack(pady=(25, 5))
 
         self.usuario = tk.Entry(
             self.janela,
@@ -88,7 +92,9 @@ class KeyNexusAdmin:
         )
         self.usuario.pack(pady=5)
 
-        self.criar_label("Senha").pack(pady=(15, 5))
+        self.criar_label(
+            "Senha"
+        ).pack(pady=(15, 5))
 
         self.senha = tk.Entry(
             self.janela,
@@ -138,6 +144,8 @@ class KeyNexusAdmin:
             "Authorization": f"Bearer {self.token}"
         }
 
+    # PAINEL PRINCIPAL
+
     def criar_painel(self):
         self.limpar()
 
@@ -150,7 +158,7 @@ class KeyNexusAdmin:
         self.criar_label(
             "Painel Administrativo",
             11
-        ).pack(pady=(0, 20))
+        ).pack(pady=(0, 15))
 
         self.criar_label(
             "Computadores cadastrados",
@@ -209,7 +217,7 @@ class KeyNexusAdmin:
             self.janela,
             bg="#15101E"
         )
-        quadro_botoes.pack(pady=12)
+        quadro_botoes.pack(pady=10)
 
         tk.Button(
             quadro_botoes,
@@ -245,7 +253,6 @@ class KeyNexusAdmin:
             pady=9
         ).grid(row=0, column=2, padx=6, pady=5)
 
-        
         tk.Button(
             quadro_botoes,
             text="Histórico de solicitações",
@@ -255,13 +262,25 @@ class KeyNexusAdmin:
             relief="flat",
             padx=15,
             pady=9
+        ).grid(row=1, column=0, padx=6, pady=5)
+
+        tk.Button(
+            quadro_botoes,
+            text="Visualizar tela (prévia)",
+            command=self.abrir_visualizacao,
+            bg="#6D42A8",
+            fg="white",
+            font=("Segoe UI", 10, "bold"),
+            relief="flat",
+            padx=15,
+            pady=9
         ).grid(
             row=1,
-            column=0,
-            columnspan=3,
-            pady=8
+            column=1,
+            columnspan=2,
+            padx=6,
+            pady=5
         )
-
 
         self.criar_botao(
             "Sair da conta",
@@ -269,6 +288,8 @@ class KeyNexusAdmin:
         ).pack(pady=(5, 20))
 
         self.atualizar()
+
+    # COMPUTADORES
 
     def atualizar(self):
         try:
@@ -303,6 +324,51 @@ class KeyNexusAdmin:
                 "Não foi possível atualizar a lista."
             )
 
+    def computador_selecionado(self):
+        selecao = self.lista.selection()
+
+        if not selecao:
+            messagebox.showwarning(
+                "KeyNexus",
+                "Selecione um computador na lista."
+            )
+            return None
+
+        identificador = selecao[0]
+        valores = self.lista.item(
+            identificador,
+            "values"
+        )
+
+        return {
+            "id": identificador,
+            "nome": valores[0],
+            "tipo": valores[1],
+            "status": valores[2]
+        }
+
+    # PRÉ-VISUALIZAÇÃO
+
+    def abrir_visualizacao(self):
+        if not self.token:
+            messagebox.showwarning(
+                "KeyNexus",
+                "Faça login antes de abrir a visualização."
+            )
+            return
+
+        computador = self.computador_selecionado()
+
+        if computador is None:
+            return
+
+        JanelaVisualizacao(
+            self.janela,
+            computador,
+            self.token
+        )
+
+    # SOLICITAÇÕES
 
     def abrir_historico(self):
         if not self.token:
@@ -317,7 +383,6 @@ class KeyNexusAdmin:
             self.token
         )
 
-
     def abrir_conexao(self):
         if not self.token:
             messagebox.showwarning(
@@ -330,6 +395,8 @@ class KeyNexusAdmin:
             self.janela,
             self.token
         )
+
+    # CADASTRO DE COMPUTADORES
 
     def cadastrar(self):
         janela_cadastro = tk.Toplevel(self.janela)
@@ -448,6 +515,8 @@ class KeyNexusAdmin:
             padx=25,
             pady=8
         ).pack(pady=15)
+
+    # LOGOUT
 
     def encerrar_sessao(self):
         if self.token:

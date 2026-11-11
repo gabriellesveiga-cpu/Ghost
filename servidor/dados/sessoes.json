@@ -1,0 +1,86 @@
+{
+    "98dd5a73-58e6-4242-94f0-55cf4f45a9a7": {
+        "id": "98dd5a73-58e6-4242-94f0-55cf4f45a9a7",
+        "solicitacao_id": "5dbc06c9-29b0-4136-84c2-a18df26374e4",
+        "computador_id": "ca3f3f1a-c5b5-4622-a406-896dc1e1b7d9",
+        "permissoes": [
+            "visualizacao",
+            "controle",
+            "arquivos"
+        ],
+        "status": "encerrada_pelo_agente",
+        "iniciada_em": "2026-11-11T18:06:57.417701+00:00",
+        "ultima_atividade": "2026-11-11T18:07:28.163103+00:00",
+        "expira_em": "2026-11-12T02:06:57.417701+00:00",
+        "encerrada_em": "2026-11-11T18:07:28.295712+00:00"
+    },
+    "ffbe9c92-59a8-40fe-8e48-034a29f0df24": {
+        "id": "ffbe9c92-59a8-40fe-8e48-034a29f0df24",
+        "solicitacao_id": "c9c9268a-342a-44ec-ab46-cfca86204119",
+        "computador_id": "ca3f3f1a-c5b5-4622-a406-896dc1e1b7d9",
+        "permissoes": [
+            "visualizacao",
+            "controle",
+            "arquivos"
+        ],
+        "status": "desconectada",
+        "iniciada_em": "2026-11-11T18:08:47.480346+00:00",
+        "ultima_atividade": "2026-11-11T18:08:49.362536+00:00",
+        "expira_em": "2026-11-12T02:08:47.480346+00:00",
+        "encerrada_em": "2026-11-11T18:31:15.690992+00:00"
+    },
+    "2148cfdf-f0d2-4057-8fa5-0c98371d34f8": {
+        "id": "2148cfdf-f0d2-4057-8fa5-0c98371d34f8",
+        "solicitacao_id": "13f47595-39a8-44b0-a629-99f61002a773",
+        "computador_id": "ca3f3f1a-c5b5-4622-a406-896dc1e1b7d9",
+        "permissoes": [
+            "visualizacao"
+        ],
+        "status": "encerrada_pelo_agente",
+        "iniciada_em": "2026-11-11T18:32:19.645379+00:00",
+        "ultima_atividade": "2026-11-11T18:41:03.367410+00:00",
+        "expira_em": "2026-11-12T02:32:19.645379+00:00",
+        "encerrada_em": "2026-11-11T18:41:03.691339+00:00"
+    },
+    "5fcc1819-8744-417b-86c6-4d3807625814": {
+        "id": "5fcc1819-8744-417b-86c6-4d3807625814",
+        "solicitacao_id": "e1c5bb53-8edd-41b6-bea7-eedb9b909206",
+        "computador_id": "ca3f3f1a-c5b5-4622-a406-896dc1e1b7d9",
+        "permissoes": [
+            "visualizacao"
+        ],
+        "status": "encerrada_pelo_agente",
+        "iniciada_em": "2026-11-11T18:41:58.394644+00:00",
+        "ultima_atividade": "2026-11-11T18:44:00.979665+00:00",
+        "expira_em": "2026-11-12T02:41:58.394644+00:00",
+        "encerrada_em": "2026-11-11T18:44:01.060799+00:00"
+    },
+    "ae129603-60ca-41fe-88b2-7a3d870221c9": {
+        "id": "ae129603-60ca-41fe-88b2-7a3d870221c9",
+        "solicitacao_id": "3dbf12df-2bad-4970-9f2d-0ceaa6aeb0ee",
+        "computador_id": "ca3f3f1a-c5b5-4622-a406-896dc1e1b7d9",
+        "permissoes": [
+            "visualizacao",
+            "controle",
+            "arquivos"
+        ],
+        "status": "desconectada",
+        "iniciada_em": "2026-11-11T19:50:32.138846+00:00",
+        "ultima_atividade": "2026-11-11T19:51:48.098652+00:00",
+        "expira_em": "2026-11-12T03:50:32.138846+00:00",
+        "encerrada_em": "2026-11-11T19:54:07.050153+00:00"
+    },
+    "3fb1ba36-d861-44f3-bed8-ff0f0df0f0ab": {
+        "id": "3fb1ba36-d861-44f3-bed8-ff0f0df0f0ab",
+        "solicitacao_id": "a21a3eaf-ff16-4a6c-95f8-bf41d21ffeae",
+        "computador_id": "ca3f3f1a-c5b5-4622-a406-896dc1e1b7d9",
+        "permissoes": [
+            "visualizacao"
+        ],
+        "status": "ativa",
+        "iniciada_em": "2026-11-11T20:00:04.347008+00:00",
+        "ultima_atividade": "2026-11-11T20:01:08.573368+00:00",
+        "expira_em": "2026-11-12T04:00:04.347008+00:00",
+        "encerrada_em": null
+    }
+}

@@ -1,0 +1,75 @@
+
+import asyncio
+
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+
+from .seguranca_agente_ws import verificar_agente_para_websocket
+
+
+def criar_router_canal_protegido(
+    verificar_admin,
+    verificar_agente
+):
+    router = APIRouter(tags=["Canal protegido"])
+
+    @router.websocket("/ws/tela/protegido")
+    async def canal_protegido(websocket: WebSocket):
+        await websocket.accept()
+
+        try:
+            mensagem = await asyncio.wait_for(
+                websocket.receive_json(),
+                timeout=10
+            )
+
+            if not isinstance(mensagem, dict):
+                await websocket.close(code=1008)
+                return
+
+            papel = mensagem.get("papel")
+
+            if papel == "administrador":
+                if not verificar_admin(mensagem.get("token")):
+                    await websocket.close(code=1008)
+                    return
+
+                await websocket.send_json({
+                    "tipo": "autenticacao",
+                    "autenticado": True,
+                    "visualizacao_liberada": False
+                })
+
+                await websocket.close(code=1000)
+                return
+
+            if papel == "agente":
+                resultado = verificar_agente_para_websocket(
+                    computador_id=mensagem.get("computador_id"),
+                    chave_computador=mensagem.get("chave_computador"),
+                    segredo_usb=mensagem.get("segredo_usb"),
+                    sessao_id=mensagem.get("sessao_id"),
+                    verificar_identidade_usb=verificar_agente
+                )
+
+                if not resultado["autorizado"]:
+                    await websocket.close(code=1008)
+                    return
+
+                await websocket.send_json({
+                    "tipo": "autenticacao",
+                    "autenticado": True,
+                    "visualizacao_liberada": False
+                })
+
+                await websocket.close(code=1000)
+                return
+
+            await websocket.close(code=1008)
+
+        except (asyncio.TimeoutError, ValueError, TypeError):
+            await websocket.close(code=1008)
+
+        except WebSocketDisconnect:
+            pass
+
+    return router

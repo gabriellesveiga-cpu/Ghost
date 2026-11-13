@@ -7,6 +7,7 @@ import requests
 from janela_conexao import JanelaConexao
 from janela_solicitacoes import JanelaSolicitacoes
 from janela_visualizacao import JanelaVisualizacao
+from janela_senha import JanelaSenha
 
 
 URL = "http://127.0.0.1:8000"
@@ -282,6 +283,8 @@ class KeyNexusAdmin:
             pady=5
         )
 
+        self.criar_botao("Trocar senha", self.abrir_troca_senha).pack(pady=(0, 5))
+
         self.criar_botao(
             "Sair da conta",
             self.sair
@@ -517,6 +520,15 @@ class KeyNexusAdmin:
         ).pack(pady=15)
 
     # LOGOUT
+
+    def abrir_troca_senha(self):
+        if self.token:
+            JanelaSenha(self.janela, URL, self.token, self.senha_alterada)
+
+    def senha_alterada(self):
+        self.token = None
+        self.criar_login()
+        messagebox.showinfo("KeyNexus", "Senha alterada. Entre novamente com a nova senha.")
 
     def encerrar_sessao(self):
         if self.token:

@@ -85,18 +85,39 @@ def consultar_solicitacoes():
 
 
 def enviar_resposta(solicitacao_id, aceitar):
-    autenticacao = obter_autenticacao()
+    autenticacao_inicial = obter_autenticacao()
+    for tentativa in range(2):
+        autenticacao = obter_autenticacao()
+        if autenticacao != autenticacao_inicial:
+            raise RuntimeError("Identidade ou pendrive mudou durante a resposta.")
+        try:
+            resposta = requests.post(
+                f"{URL_SERVIDOR}/solicitacoes/responder",
+                json={**autenticacao, "solicitacao_id": solicitacao_id, "aceitar": aceitar},
+                timeout=5
+            )
+            resposta.raise_for_status()
+            return resposta.json()
+        except requests.RequestException as erro:
+            if not _falha_transitoria(erro):
+                raise
+            if aceitar:
+                # Import local evita dependência circular na inicialização.
+                from sessoes import recuperar_sessao
+                try:
+                    recuperacao = recuperar_sessao(solicitacao_id, autenticacao_inicial)
+                    if recuperacao.get("sessao"):
+                        return {**recuperacao, "respondida": True}
+                except requests.RequestException as falha:
+                    codigo = falha.response.status_code if falha.response is not None else None
+                    # 409 pode significar que o aceite ainda não chegou.
+                    if not _falha_transitoria(falha) and codigo != 409:
+                        raise
+            if tentativa == 1:
+                raise
 
-    resposta = requests.post(
-        f"{URL_SERVIDOR}/solicitacoes/responder",
-        json={
-            **autenticacao,
-            "solicitacao_id": solicitacao_id,
-            "aceitar": aceitar
-        },
-        timeout=5
-    )
 
-    resposta.raise_for_status()
-
-    return resposta.json()
+def _falha_transitoria(erro):
+    return (isinstance(erro, (requests.ConnectionError, requests.Timeout, requests.exceptions.JSONDecodeError))
+            or (isinstance(erro, requests.HTTPError) and erro.response is not None
+                and erro.response.status_code >= 500))

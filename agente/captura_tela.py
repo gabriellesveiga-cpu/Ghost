@@ -7,9 +7,10 @@ import time
 
 
 class CapturaTela:
-    def __init__(self, janela, sessao_id=None):
+    def __init__(self, janela, sessao_id=None, pode_capturar=None):
         self.janela = janela
         self.sessao_id = sessao_id
+        self.pode_capturar = pode_capturar
         self.janela.title("KeyNexus — Captura de Tela")
         self.janela.geometry("1000x720")
         self.janela.minsize(700, 550)
@@ -187,6 +188,8 @@ class CapturaTela:
             )
 
     def iniciar(self):
+        if self.pode_capturar is not None and not self.pode_capturar():
+            return
         if self.capturando:
             return
 
@@ -224,6 +227,10 @@ class CapturaTela:
 
     def atualizar_tela(self):
         self.tarefa_atualizacao = None
+
+        if self.pode_capturar is not None and not self.pode_capturar():
+            self.parar()
+            return
 
         if not self.capturando:
             return

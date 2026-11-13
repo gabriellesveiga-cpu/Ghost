@@ -14,6 +14,7 @@ ARQUIVO = PASTA_DADOS / "solicitacoes.json"
 BLOQUEIO = threading.RLock()
 
 TEMPO_EXPIRACAO = timedelta(minutes=2)
+TEMPO_AUTORIZACAO_ACEITA = timedelta(minutes=2)
 
 PERMISSOES_VALIDAS = {
     "visualizacao",
@@ -170,7 +171,8 @@ def responder_solicitacao(
     with BLOQUEIO:
         solicitacoes = carregar_solicitacoes()
 
-        atualizar_expiracoes(solicitacoes)
+        if atualizar_expiracoes(solicitacoes):
+            salvar_solicitacoes(solicitacoes)
 
         solicitacao = solicitacoes.get(solicitacao_id)
 
@@ -184,6 +186,11 @@ def responder_solicitacao(
                 "Solicitação pertence a outro computador."
             )
 
+        decisao = "aceita" if aceitar else "recusada"
+        if solicitacao["status"] == decisao:
+            # Repetir a mesma decisão não renova o consentimento.
+            return solicitacao.copy()
+
         if solicitacao["status"] != "pendente":
             raise ValueError(
                 "Solicitação não está pendente."
@@ -194,10 +201,45 @@ def responder_solicitacao(
         )
 
         solicitacao["respondida_em"] = agora().isoformat()
+        if aceitar:
+            solicitacao["autorizacao_expira_em"] = (
+                datetime.fromisoformat(solicitacao["respondida_em"])
+                + TEMPO_AUTORIZACAO_ACEITA
+            ).isoformat()
 
         salvar_solicitacoes(solicitacoes)
 
     return solicitacao.copy()
+
+
+def validar_prazo_autorizacao(solicitacao):
+    """Somente antes da primeira criação; aceites antigos também têm prazo."""
+    try:
+        limite = solicitacao.get("autorizacao_expira_em")
+        expiracao = (datetime.fromisoformat(limite) if limite else
+                     datetime.fromisoformat(solicitacao["respondida_em"])
+                     + TEMPO_AUTORIZACAO_ACEITA)
+        if agora() < expiracao:
+            return
+    except (ValueError, TypeError):
+        pass
+    raise ValueError("Autorização aceita expirou. Solicite um novo consentimento.")
+
+
+def cancelar_autorizacoes_nao_consumidas(computador_id, consumidas):
+    with BLOQUEIO:
+        solicitacoes = carregar_solicitacoes()
+        alterado = False
+        for solicitacao in solicitacoes.values():
+            if (solicitacao["computador_id"] == computador_id
+                    and solicitacao["id"] not in consumidas
+                    and solicitacao["status"] in ("pendente", "aceita")):
+                solicitacao["status"] = "cancelada"
+                solicitacao["cancelada_em"] = agora().isoformat()
+                solicitacao["motivo_cancelamento"] = "credencial_substituida"
+                alterado = True
+        if alterado:
+            salvar_solicitacoes(solicitacoes)
 
 
 def listar_todas_solicitacoes():

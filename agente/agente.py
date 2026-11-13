@@ -10,7 +10,9 @@ from validar_usb import validar_usb_servidor
 from solicitacoes import consultar_solicitacoes, enviar_resposta
 from janela_solicitacao import JanelaSolicitacao
 from sessoes import registrar_atividade, encerrar_sessao
+from sessoes import guardar_autorizacao_encerramento
 from captura_tela import CapturaTela
+from seguranca_compartilhamento import SegurancaCompartilhamento
 
 
 URL_SERVIDOR = "http://127.0.0.1:8000"
@@ -38,6 +40,8 @@ class KeyNexusAgente:
         self.sessao_atual = None
         self.sessao_confirmada = False
         self.sessao_bloqueada = False
+        self.geracao = 0
+        self.seguranca_usb = None
 
         self.encerramento_em_andamento = False
         self.monitoramento_sessao_em_andamento = False
@@ -169,6 +173,9 @@ class KeyNexusAgente:
         if self.sessao_bloqueada:
             return False
 
+        if self.seguranca_usb is None or not self.seguranca_usb.autorizada():
+            return False
+
         if self.sessao_atual.get("status") != "ativa":
             return False
 
@@ -193,7 +200,8 @@ class KeyNexusAgente:
 
         self.captura = CapturaTela(
             self.janela_captura,
-            sessao_id=self.sessao_atual["id"]
+            sessao_id=self.sessao_atual["id"],
+            pode_capturar=self.captura_autorizada
         )
 
         self.janela_captura.protocol(
@@ -283,12 +291,13 @@ class KeyNexusAgente:
         self.verificacao_em_andamento = True
 
         self.executor.submit(
-            self.executar_verificacao
+            self.executar_verificacao, self.geracao
         )
 
-    def executar_verificacao(self):
+    def executar_verificacao(self, geracao):
         try:
             resultado = self.consultar_estados()
+            resultado["geracao"] = geracao
 
             self.resultados.put(
                 ("estados", resultado)
@@ -296,7 +305,7 @@ class KeyNexusAgente:
 
         except Exception as erro:
             self.resultados.put(
-                ("erro", str(erro))
+                ("erro", {"geracao": geracao})
             )
 
     def monitorar_resultados(self):
@@ -309,7 +318,8 @@ class KeyNexusAgente:
 
                 if tipo == "estados":
                     self.verificacao_em_andamento = False
-                    self.aplicar_resultado(resultado)
+                    if resultado["geracao"] == self.geracao:
+                        self.aplicar_resultado(resultado)
 
                 elif tipo == "resposta":
                     self.processar_resposta(resultado)
@@ -320,13 +330,22 @@ class KeyNexusAgente:
                 elif tipo == "encerramento":
                     self.processar_encerramento(resultado)
 
+                elif tipo == "seguranca_usb":
+                    sessao_id, geracao = resultado
+                    if (self.sessao_atual is not None
+                            and self.sessao_atual["id"] == sessao_id
+                            and self.geracao == geracao):
+                        self.suspender_sessao("Pendrive, rede ou credencial indisponível.")
+
                 elif tipo == "erro":
                     self.verificacao_em_andamento = False
+                    if resultado["geracao"] != self.geracao:
+                        continue
 
                     self.status_pedidos.config(
                         text=(
                             "Solicitações: erro na verificação "
-                            f"({resultado})"
+                            "de segurança."
                         ),
                         fg="#FF8080"
                     )
@@ -366,6 +385,7 @@ class KeyNexusAgente:
             text=f"Sessão suspensa: {motivo}",
             fg="#FF8080"
         )
+        self.solicitar_encerramento()
 
     def aplicar_resultado(self, dados):
         online = dados["servidor"]
@@ -510,21 +530,24 @@ class KeyNexusAgente:
         self.executor.submit(
             self.executar_resposta,
             solicitacao_id,
-            aceitar
+            aceitar,
+            self.geracao
         )
 
-    def executar_resposta(self, solicitacao_id, aceitar):
+    def executar_resposta(self, solicitacao_id, aceitar, geracao):
         try:
             resposta_servidor = enviar_resposta(
                 solicitacao_id,
                 aceitar
             )
+            guardar_autorizacao_encerramento(resposta_servidor.get("sessao"))
 
             self.resultados.put(
                 (
                     "resposta",
                     {
                         "id": solicitacao_id,
+                        "geracao": geracao,
                         "sucesso": True,
                         "aceitar": aceitar,
                         "sessao": resposta_servidor.get("sessao")
@@ -538,8 +561,9 @@ class KeyNexusAgente:
                     "resposta",
                     {
                         "id": solicitacao_id,
+                        "geracao": geracao,
                         "sucesso": False,
-                        "erro": str(erro)
+                        "erro": "Não foi possível confirmar a resposta."
                     }
                 )
             )
@@ -551,14 +575,28 @@ class KeyNexusAgente:
             identificador
         )
 
+        if resultado["geracao"] != self.geracao:
+            if resultado.get("sessao"):
+                self.executor.submit(self.executar_encerramento, resultado["sessao"]["id"])
+            return
+
         if resultado["sucesso"]:
             if resultado["aceitar"]:
                 sessao = resultado.get("sessao")
 
                 if sessao:
+                    if sessao.get("status") != "ativa":
+                        self.status_pedidos.config(
+                            text="Sessão já encerrada. É necessária uma nova solicitação aceita.",
+                            fg="#FFB86B"
+                        )
+                        return
+                    self.geracao += 1
                     self.sessao_atual = sessao
                     self.sessao_confirmada = False
                     self.sessao_bloqueada = False
+                    self.monitoramento_sessao_em_andamento = False
+                    self.iniciar_seguranca_sessao()
 
                     self.atualizar_interface_sessao()
                     self.verificar_sessao_ativa()
@@ -584,6 +622,18 @@ class KeyNexusAgente:
             )
 
     # INTERFACE DA SESSÃO
+
+    def iniciar_seguranca_sessao(self):
+        if self.seguranca_usb is not None:
+            self.seguranca_usb.parar()
+        sessao_id = self.sessao_atual["id"]
+        geracao = self.geracao
+        self.seguranca_usb = SegurancaCompartilhamento(
+            ao_interromper=lambda: self.resultados.put(
+                ("seguranca_usb", (sessao_id, geracao))
+            )
+        )
+        self.seguranca_usb.iniciar()
 
     def atualizar_interface_sessao(self):
         sessao = self.sessao_atual
@@ -708,13 +758,13 @@ class KeyNexusAgente:
             )
 
     def processar_monitoramento_sessao(self, resultado):
-        self.monitoramento_sessao_em_andamento = False
-
         if self.sessao_atual is None:
             return
 
         if resultado["sessao_id"] != self.sessao_atual["id"]:
             return
+
+        self.monitoramento_sessao_em_andamento = False
 
         if self.sessao_bloqueada:
             return
@@ -759,6 +809,8 @@ class KeyNexusAgente:
         self.encerramento_em_andamento = True
         self.sessao_confirmada = False
         self.sessao_bloqueada = True
+        if self.seguranca_usb is not None:
+            self.seguranca_usb.parar()
 
         self.botao_visualizar.config(
             state="disabled"
@@ -782,6 +834,7 @@ class KeyNexusAgente:
                     "encerramento",
                     {
                         "sucesso": True,
+                        "sessao_id": sessao_id,
                         "sessao": sessao
                     }
                 )
@@ -793,18 +846,23 @@ class KeyNexusAgente:
                     "encerramento",
                     {
                         "sucesso": False,
-                        "erro": str(erro)
+                        "sessao_id": sessao_id,
+                        "erro": "Falha de comunicação ao encerrar a sessão."
                     }
                 )
             )
 
     def processar_encerramento(self, resultado):
+        if (self.sessao_atual is None
+                or resultado["sessao_id"] != self.sessao_atual["id"]):
+            return
         self.encerramento_em_andamento = False
 
         if resultado["sucesso"]:
             self.interromper_captura()
 
             self.sessao_atual = None
+            self.geracao += 1
             self.sessao_confirmada = False
             self.sessao_bloqueada = False
 
@@ -835,23 +893,15 @@ class KeyNexusAgente:
 
         self.interromper_captura()
         self.fechar_solicitacao_aberta()
+        if self.seguranca_usb is not None:
+            self.seguranca_usb.parar()
 
         if self.sessao_atual is not None:
-            try:
-                encerrar_sessao(
-                    self.sessao_atual["id"]
-                )
-            except (
-                requests.RequestException,
-                RuntimeError,
-                OSError,
-                KeyError
-            ):
-                pass
+            self.executor.submit(self.executar_encerramento, self.sessao_atual["id"])
 
         self.executor.shutdown(
             wait=False,
-            cancel_futures=True
+            cancel_futures=False
         )
 
         self.janela.destroy()

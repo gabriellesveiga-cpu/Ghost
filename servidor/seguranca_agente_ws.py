@@ -19,7 +19,7 @@ def verificar_agente_para_websocket(
     o pendrive continua fisicamente conectado.
     """
 
-    if not all([
+    if not all(isinstance(valor, str) and 0 < len(valor) <= 256 for valor in [
         computador_id,
         chave_computador,
         segredo_usb,

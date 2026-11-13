@@ -3,8 +3,8 @@ import hashlib
 import hmac
 import json
 import os
-import secrets
 import threading
+from datetime import datetime, timezone
 
 from pathlib import Path
 
@@ -67,7 +67,7 @@ def salvar_credenciais(dados):
 
 
 def registrar_credencial(computador_id, segredo):
-    if not isinstance(segredo, str) or len(segredo) < 32:
+    if not isinstance(segredo, str) or not 32 <= len(segredo) <= 256:
         raise ValueError(
             "Segredo USB inválido."
         )
@@ -104,8 +104,14 @@ def validar_credencial(computador_id, segredo):
     if not registro.get("ativa", False):
         return False
 
-    hash_recebido = gerar_hash_usb(segredo)
+    try:
+        hash_recebido = gerar_hash_usb(segredo)
+    except UnicodeError:
+        return False
     hash_salvo = registro.get("hash", "")
+    if (not isinstance(hash_salvo, str) or len(hash_salvo) != 64
+            or any(c not in "0123456789abcdef" for c in hash_salvo)):
+        return False
 
     return hmac.compare_digest(
         hash_recebido,
@@ -125,3 +131,29 @@ def revogar_credencial(computador_id):
         salvar_credenciais(credenciais)
 
     return True
+
+
+def validar_substituicao(computador_id, novo_segredo):
+    if not isinstance(novo_segredo, str) or not 32 <= len(novo_segredo) <= 256:
+        raise ValueError("Nova credencial inválida.")
+    with BLOQUEIO_USB:
+        registro = carregar_credenciais().get(computador_id)
+        if not isinstance(registro, dict) or registro.get("ativa") is not False:
+            raise ValueError("A substituição exige uma credencial previamente revogada.")
+        hash_anterior = registro.get("hash")
+        if (not isinstance(hash_anterior, str) or len(hash_anterior) != 64
+                or any(c not in "0123456789abcdef" for c in hash_anterior)):
+            raise ValueError("Registro de credencial inválido.")
+        if hmac.compare_digest(gerar_hash_usb(novo_segredo), hash_anterior):
+            raise ValueError("A nova credencial deve ser diferente da anterior.")
+
+
+def substituir_credencial(computador_id, novo_segredo):
+    with BLOQUEIO_USB:
+        validar_substituicao(computador_id, novo_segredo)
+        credenciais = carregar_credenciais()
+        credenciais[computador_id] = {
+            "hash": gerar_hash_usb(novo_segredo), "ativa": True,
+            "substituida_em": datetime.now(timezone.utc).isoformat(),
+        }
+        salvar_credenciais(credenciais)

@@ -7,12 +7,21 @@ from .seguranca_agente_ws import verificar_agente_para_websocket
 from .monitor_sessao_tela import MonitorSessaoTela
 
 
-def criar_router_canal_protegido(verificar_admin, verificar_agente):
+def criar_router_canal_protegido(verificar_admin, verificar_agente, limite_autenticacao=None):
     router = APIRouter(tags=["Canal protegido"])
 
     @router.websocket("/ws/tela/protegido")
     async def canal_protegido(websocket: WebSocket):
         await websocket.accept()
+        origem = websocket.client.host if websocket.client else "origem-desconhecida"
+        if limite_autenticacao is not None and limite_autenticacao.admitir(origem):
+            await websocket.close(code=1008)
+            return
+
+        async def rejeitar():
+            if limite_autenticacao is not None:
+                limite_autenticacao.falha(origem)
+            await websocket.close(code=1008)
 
         try:
             mensagem = await asyncio.wait_for(
@@ -21,7 +30,7 @@ def criar_router_canal_protegido(verificar_admin, verificar_agente):
             )
 
             if not isinstance(mensagem, dict):
-                await websocket.close(code=1008)
+                await rejeitar()
                 return
 
             papel = mensagem.get("papel")
@@ -29,8 +38,8 @@ def criar_router_canal_protegido(verificar_admin, verificar_agente):
             if papel == "administrador":
                 token = mensagem.get("token")
 
-                if not verificar_admin(token):
-                    await websocket.close(code=1008)
+                if not await asyncio.to_thread(verificar_admin, token):
+                    await rejeitar()
                     return
 
                 # O administrador foi autenticado, mas ainda
@@ -45,7 +54,7 @@ def criar_router_canal_protegido(verificar_admin, verificar_agente):
                 return
 
             if papel != "agente":
-                await websocket.close(code=1008)
+                await rejeitar()
                 return
 
             computador_id = mensagem.get("computador_id")
@@ -60,7 +69,7 @@ def criar_router_canal_protegido(verificar_admin, verificar_agente):
             )
 
             if not resultado.get("autorizado"):
-                await websocket.close(code=1008)
+                await rejeitar()
                 return
 
             monitor = MonitorSessaoTela(
@@ -106,7 +115,7 @@ def criar_router_canal_protegido(verificar_admin, verificar_agente):
             ValueError,
             TypeError
         ):
-            await websocket.close(code=1008)
+            await rejeitar()
 
         except WebSocketDisconnect:
             pass
